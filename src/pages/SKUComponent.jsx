@@ -8,15 +8,15 @@ import {
 import Dialog from "@mui/material/Dialog";
 
 import React, { useEffect, useState } from "react";
-import BarcodeReader from "react-barcode-reader";
+
+// import javascriptBarcodeReader from "javascript-barcode-reader";
 
 export default function SKUComponent() {
   const [open, setOpen] = useState(false);
-  const [state, setState] = useState(false);
   const [savedProduct, setSavedProduct] = useState(null);
 
   const getProducts = () => {
-    fetch("http://localhost:3000/get-product")
+    fetch(`https://animated-cosmic-pomegranate.glitch.me/get-data`)
       .then((response) => response.json())
       .then((data) => setSavedProduct(data))
       .catch((error) => console.error(error));
@@ -30,21 +30,77 @@ export default function SKUComponent() {
     setOpen(false);
   };
 
-  const handleScan = (data) => {
-    setState({
-      result: data,
-    });
-  };
-  const handleError = (err) => {
-    console.error(err);
-  };
+  async function imageUrlToUint8ClampedArray(imageUrl) {
+    // Fetch the image from the URL
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
 
-  // useEffect(() => {
-  //   setState(true);
-  // }, [state]);
+    // Create an image element
+    const imageElement = new Image();
+
+    // Create a canvas to draw the image on
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    // Wait for the image to load
+    return new Promise((resolve, reject) => {
+      imageElement.onload = function () {
+        // Set the canvas size to the size of the image
+        canvas.width = imageElement.width;
+        canvas.height = imageElement.height;
+
+        // Draw the image on the canvas
+        context.drawImage(
+          imageElement,
+          0,
+          0,
+          imageElement.width,
+          imageElement.height
+        );
+
+        // Get the image data from the canvas
+        const imageData = context.getImageData(
+          0,
+          0,
+          imageElement.width,
+          imageElement.height
+        );
+
+        // Return the Uint8ClampedArray representation of the image data
+        resolve(imageData.data);
+      };
+      imageElement.onerror = reject;
+      imageElement.src = URL.createObjectURL(blob);
+    });
+  }
+
+  const imgSource = imageUrlToUint8ClampedArray(
+    `https://i.imgur.com/8fvpGtY.jpeg`
+  );
+
+  // javascriptBarcodeReader({
+  //   /* Image file Path || {data: Uint8ClampedArray, width, height} || HTML5 Canvas ImageData */
+  //   image: imgSource,
+  //   barcode: "code-2of5",
+  //   // barcodeType: 'industrial',
+  //   options: {
+  //     useAdaptiveThreshold: true,
+  //     // for images with sahded portions
+  //     singlePass: true,
+  //   },
+  // })
+  //   .then((code) => {
+  //     console.log("Invoked");
+  //     console.log(code);
+  //   })
+  //   .catch((err) => {
+  //     console.log(err);
+  //   });
 
   useEffect(() => {
     getProducts();
+
+    // javascriptBarcodeReader();
   }, []);
 
   const formOnSubmit = (e) => {
@@ -55,7 +111,7 @@ export default function SKUComponent() {
     // console.log(formObject);
     const payload = JSON.stringify(formObject);
 
-    fetch("http://localhost:3000/add-product", {
+    fetch("https://animated-cosmic-pomegranate.glitch.me/add-product", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -102,7 +158,6 @@ export default function SKUComponent() {
             </div>
           );
         })}
-        {/* <BarcodeReader onError={handleError} onScan={handleScan} /> */}
       </div>
 
       <Dialog
