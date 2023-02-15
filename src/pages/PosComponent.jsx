@@ -7,13 +7,14 @@ import {
   TextField,
 } from "@mui/material";
 import React, { useState } from "react";
-// import Quagga from "quagga";
+import Quagga from "quagga";
 import jsQR from "jsqr";
 
 export default function PosComponent() {
   const [open, setOpen] = useState(false);
   const [matingProduct, setMatingProduct] = useState(null);
   const [productId, setProductId] = useState(null);
+  const [barcodeData, setBarcodeData] = useState(null);
 
   const handleClose = () => {
     setOpen(false);
@@ -162,24 +163,55 @@ export default function PosComponent() {
       };
     });
   }
-  const cameraBtnOnClick = async () => {
-    const result = await takePhoto();
-    // if (result) {
-    //   document.body.appendChild(result.video);
 
-    //   console.log(result.photo, "PHOTO......................");
-    // }
-    if (result) {
-      console.log(result);
-      // const blobImage = new Blob([result], { type: "image/png" });
-      debugger;
-      readBarcode(result)
-        .then((code) => {
-          console.log("Barcode code:", code);
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+  function readQRCode(imageUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code) {
+          resolve(code.data);
+        } else {
+          reject(new Error("No QR code found in image"));
+        }
+      };
+      img.onerror = function () {
+        reject(new Error("Failed to load image"));
+      };
+      img.src = imageUrl;
+    });
+  }
+  const convertBase64ToDataUrl = (base64) => {
+    return "data:image/png;base64," + base64;
+  };
+
+  const cameraBtnOnClick = async () => {
+    let intervalId = setInterval(async function () {
+      const result = await takePhoto();
+      if (result) {
+        console.log(result);
+        // const blobImage = new Blob([result], { type: "image/png" });
+        debugger;
+        readQRCode(result)
+          .then((code) => {
+            setBarcodeData(code);
+            console.log("Barcode code:----------------------------", code);
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      }
+    }, 100);
+
+    if (barcodeData) {
+      clearInterval(intervalId);
     }
   };
 
@@ -205,7 +237,7 @@ export default function PosComponent() {
           camera
         </Button>
       </div>
-
+      <canvas id="barcode-scanner"></canvas>
       {matingProduct && <h1>Product Details</h1>}
       {matingProduct?.map((elm, i) => {
         return (
